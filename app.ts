@@ -6,10 +6,19 @@ import passportazure from "passport-azure-ad";
 import expressValidator from "express-validator";
 import cookieParser from "cookie-parser";
 import session from "express-session";
+import cors from "cors";
 
 /* Config & Utils */
 import { SESSION_SECRET, PORT, URL_FRONTEND } from "./utils/secrets";
 import passportconfig from "./config/passport";
+
+/* Routes */
+import authRoutes from "./routes/auth.routes";
+import specialRoutes from "./routes/special.routes";
+import mainRoutes from "./routes";
+
+/* Middlewares */
+import passportMiddleware from "./middlewares/passport-middleware";
 
 const OIDCStrategy = passportazure.OIDCStrategy;
 
@@ -89,11 +98,10 @@ passport.use(
   )
 );
 
-import mainRoutes from "./routes";
-
 const app: express.Application = express();
 
 /* Cors */
+/* app.use(cors()); */
 app.use(function (req, res, next) {
   res.header("Access-Control-Allow-Origin", URL_FRONTEND);
   res.header(
@@ -106,7 +114,7 @@ app.use(function (req, res, next) {
 });
 app.use(morgan("dev"));
 app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.urlencoded({ extended: false }));
 app.use(expressValidator());
 app.use(cookieParser());
 
@@ -119,23 +127,15 @@ export const sessionMiddleware = session({
 app.use(sessionMiddleware);
 app.use(passport.initialize());
 app.use(passport.session());
+/* passport.use(passportMiddleware); */
 app.use((req, res, next) => {
   res.locals.user = req.user;
   next();
 });
 
 app.use("/api", [sessionMiddleware], mainRoutes);
-/* AD logout */
-
-/* app.use("/api/logout", function (req: any, res: any, next) {
-  req.session.destroy(function (err: any) {
-    req.logOut((err: any) => {
-      if (err) return next(err);
-
-      res.redirect(passportconfig.destroySessionUrl);
-    });
-  });
-}); */
+app.use("/auth", [sessionMiddleware], authRoutes);
+app.use("/auth", [sessionMiddleware], specialRoutes);
 
 // read static files
 app.use(express.static(path.join(__dirname, "..", "..", "dist")));
