@@ -1,4 +1,7 @@
+/* Modules */
 import mongoose, { ConnectOptions } from "mongoose";
+
+/* Config */
 import { DB } from "../utils/secrets";
 
 mongoose.connect(DB.URI, {

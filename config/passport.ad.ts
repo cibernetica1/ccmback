@@ -4,7 +4,7 @@ const passconfig = {
   creds: {
     identityMetadata: `https://login.microsoftonline.com/${TENANT}/.well-known/openid-configuration`,
     clientID: APP_ID,
-    redirectUrl: `${HOST_URL}:${PORT}/api/signin`,
+    redirectUrl: `${HOST_URL}:${PORT}/ad-auth/signin`,
     clientSecret: APP_SECRET,
   },
   resourceURL: "https://graph.windows.net",

@@ -1,6 +1,11 @@
-import User from "../models/user";
+/* Modules */
 import { Strategy, ExtractJwt, StrategyOptions } from "passport-jwt";
-import { JWT_SECRET, SESSION_SECRET } from "../utils/secrets";
+
+/* Modules */
+import User from "../models/user";
+
+/* Config */
+import { JWT_SECRET } from "../utils/secrets";
 
 const opts: StrategyOptions = {
   jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),

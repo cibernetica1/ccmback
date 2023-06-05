@@ -1,4 +1,7 @@
+/* App */
 import app from "./app";
+
+/* DB */
 import "./database/mongodb";
 
 app.listen(3000);

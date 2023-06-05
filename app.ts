@@ -1,107 +1,24 @@
-import express, { Router } from "express";
+import express from "express";
 import morgan from "morgan";
 import path from "path";
+import session from "express-session";
 import passport from "passport";
-import passportazure from "passport-azure-ad";
 import expressValidator from "express-validator";
 import cookieParser from "cookie-parser";
-import session from "express-session";
-import cors from "cors";
-
-/* Config & Utils */
-import { SESSION_SECRET, PORT, URL_FRONTEND } from "./utils/secrets";
-import passportconfig from "./config/passport";
 
 /* Routes */
-import authRoutes from "./routes/auth.routes";
+import authADRoutes from "./routes/auth.ad.routes";
+import authJWTRoutes from "./routes/special.routes";
 import specialRoutes from "./routes/special.routes";
-import mainRoutes from "./routes";
 
 /* Middlewares */
-import passportMiddleware from "./middlewares/passport-middleware";
-
-const OIDCStrategy = passportazure.OIDCStrategy;
-
-passport.serializeUser(function (user: any, done: any) {
-  done(null, user.oid);
-});
-
-passport.deserializeUser(function (oid: any, done: any) {
-  findByOid(oid, function (err: any, user: any) {
-    done(err, user);
-  });
-});
-
-var users: any = [];
-
-var findByOid = function (oid: any, fn: any) {
-  for (var i = 0, len = users.length; i < len; i++) {
-    var user = users[i];
-    if (user.oid === oid) {
-      return fn(null, user);
-    }
-  }
-  return fn(null, null);
-};
-
-passport.use(
-  new OIDCStrategy(
-    {
-      identityMetadata: passportconfig.creds.identityMetadata,
-      clientID: passportconfig.creds.clientID,
-      responseType: "code id_token",
-      responseMode: "form_post",
-      redirectUrl: passportconfig.creds.redirectUrl,
-      allowHttpForRedirectUrl: true,
-      clientSecret: passportconfig.creds.clientSecret,
-      validateIssuer: true,
-      isB2C: false,
-      issuer: "",
-      passReqToCallback: false,
-      scope: "",
-      loggingLevel: "error",
-      nonceLifetime: 0,
-      nonceMaxAmount: 5,
-      useCookieInsteadOfSession: true,
-      cookieEncryptionKeys: [
-        { key: "12345678901234567890123456789012", iv: "123456789012" },
-        { key: "abcdefghijklmnopqrstuvwxyzabcdef", iv: "abcdefghijkl" },
-      ],
-      //clockSkew: 0
-    },
-    function (
-      iss: any,
-      sub: any,
-      profile: any,
-      accessToken: any,
-      refreshToken: any,
-      done: any
-    ) {
-      if (!profile.oid) {
-        return done(new Error("No oid found"), null);
-      }
-      // asynchronous verification, for effect...
-      process.nextTick(function () {
-        findByOid(profile.oid, function (err: any, user: any) {
-          if (err) {
-            return done(err);
-          }
-          if (!user) {
-            // "Auto-registration"
-            users.push(profile);
-            return done(null, profile);
-          }
-          return done(null, user);
-        });
-      });
-    }
-  )
-);
+import sessionJWTMiddleware from "./middlewares/passport-jwt";
+import sessionADMiddleware from "./middlewares/passport-ad";
+import { SESSION_SECRET, URL_FRONTEND } from "./utils/secrets";
 
 const app: express.Application = express();
 
 /* Cors */
-/* app.use(cors()); */
 app.use(function (req, res, next) {
   res.header("Access-Control-Allow-Origin", URL_FRONTEND);
   res.header(
@@ -117,25 +34,25 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(expressValidator());
 app.use(cookieParser());
-
-export const sessionMiddleware = session({
-  resave: true,
-  saveUninitialized: true,
-  secret: SESSION_SECRET,
-});
-
-app.use(sessionMiddleware);
+app.use(
+  session({
+    resave: true,
+    saveUninitialized: true,
+    secret: SESSION_SECRET,
+  })
+);
 app.use(passport.initialize());
 app.use(passport.session());
-/* passport.use(passportMiddleware); */
+passport.use(sessionADMiddleware);
+passport.use(sessionJWTMiddleware);
 app.use((req, res, next) => {
   res.locals.user = req.user;
   next();
 });
 
-app.use("/api", [sessionMiddleware], mainRoutes);
-app.use("/auth", [sessionMiddleware], authRoutes);
-app.use("/auth", [sessionMiddleware], specialRoutes);
+app.use("/ad-auth", authADRoutes);
+app.use("/auth", authJWTRoutes);
+app.use("/api", specialRoutes);
 
 // read static files
 app.use(express.static(path.join(__dirname, "..", "..", "dist")));

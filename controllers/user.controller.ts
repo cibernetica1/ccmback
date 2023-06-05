@@ -1,6 +1,11 @@
+/* Modules */
 import { Request, Response } from "express";
-import User, { IUser } from "../models/user";
 import jwt from "jsonwebtoken";
+
+/* Modules */
+import User, { IUser } from "../models/user";
+
+/* Config */
 import { JWT_SECRET } from "../utils/secrets";
 
 function createToken(user: IUser) {
